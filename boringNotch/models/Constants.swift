@@ -68,7 +68,26 @@ enum OptionKeyAction: String, CaseIterable, Identifiable, Defaults.Serializable 
     var id: String { self.rawValue }
 }
 
+enum NotchSurfaceStyle: String, CaseIterable, Identifiable, Defaults.Serializable {
+    case classic = "Classic"
+    case glass = "Glass"
+
+    var id: String { rawValue }
+}
+
+enum NotchHomeLayout: String, CaseIterable, Identifiable, Defaults.Serializable {
+    case balanced = "Balanced"
+    case calendarFirst = "Calendar first"
+    case musicFocus = "Music focus"
+
+    var id: String { rawValue }
+}
+
 extension Defaults.Keys {
+    static let notchSurfaceStyle = Key<NotchSurfaceStyle>("notchSurfaceStyle", default: .glass)
+    static let notchHomeLayout = Key<NotchHomeLayout>("notchHomeLayout", default: .balanced)
+    static let compactHomeSpacing = Key<Bool>("compactHomeSpacing", default: false)
+
     // MARK: General
     static let menubarIcon = Key<Bool>("menubarIcon", default: true)
     static let showOnAllDisplays = Key<Bool>("showOnAllDisplays", default: false)

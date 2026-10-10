@@ -31,6 +31,10 @@ struct ContentView: View {
 
     @State private var haptics: Bool = false
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Default(.notchSurfaceStyle) private var notchSurfaceStyle
+
     @Namespace var albumArtNamespace
 
     @Default(.useMusicVisualizer) var useMusicVisualizer
@@ -38,7 +42,28 @@ struct ContentView: View {
     @Default(.showNotHumanFace) var showNotHumanFace
 
     // Shared interactive spring for movement/resizing to avoid conflicting animations
-    private let animationSpring = Animation.interactiveSpring(response: 0.38, dampingFraction: 0.8, blendDuration: 0)
+    private var animationSpring: Animation {
+        reduceMotion ? .easeOut(duration: 0.15)
+            : .interactiveSpring(response: 0.38, dampingFraction: 0.86, blendDuration: 0)
+    }
+
+    private var usesGlass: Bool {
+        notchSurfaceStyle == .glass && vm.notchState == .open
+    }
+
+    @ViewBuilder
+    private var notchBackground: some View {
+        if usesGlass && !reduceTransparency {
+            Rectangle().fill(.ultraThinMaterial)
+                .overlay(Color.black.opacity(0.45))
+                .overlay {
+                    LinearGradient(colors: [.white.opacity(0.12), .clear, .black.opacity(0.2)],
+                                   startPoint: .topLeading, endPoint: .bottomTrailing)
+                }
+        } else {
+            Color.black
+        }
+    }
 
     private let extendedHoverPadding: CGFloat = 30
     private let zeroHeightHoverPadding: CGFloat = 10
@@ -83,7 +108,7 @@ struct ContentView: View {
     var body: some View {
         // Calculate scale based on gesture progress only
         let gestureScale: CGFloat = {
-            guard gestureProgress != 0 else { return 1.0 }
+            guard !reduceMotion, gestureProgress != 0 else { return 1.0 }
             let scaleFactor = 1.0 + gestureProgress * 0.01
             return max(0.6, scaleFactor)
         }()
@@ -100,8 +125,17 @@ struct ContentView: View {
                         : cornerRadiusInsets.closed.bottom
                     )
                     .padding([.horizontal, .bottom], vm.notchState == .open ? 12 : 0)
-                    .background(.black)
+                    .background { notchBackground }
                     .clipShape(currentNotchShape)
+                    .overlay {
+                        if usesGlass {
+                            currentNotchShape
+                                .stroke(LinearGradient(
+                                    colors: [.white.opacity(0.28), .white.opacity(0.04), .white.opacity(0.12)],
+                                    startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 0.75)
+                                .allowsHitTesting(false)
+                        }
+                    }
                     .overlay(alignment: .top) {
                         Rectangle()
                             .fill(.black)
@@ -124,8 +158,8 @@ struct ContentView: View {
                         let closeAnimation = Animation.spring(response: 0.45, dampingFraction: 1.0, blendDuration: 0)
                         
                         return view
-                            .animation(vm.notchState == .open ? openAnimation : closeAnimation, value: vm.notchState)
-                            .animation(.smooth, value: gestureProgress)
+                            .animation(reduceMotion ? .easeOut(duration: 0.15) : vm.notchState == .open ? openAnimation : closeAnimation, value: vm.notchState)
+                            .animation(reduceMotion ? nil : .smooth, value: gestureProgress)
                     }
                     .contentShape(Rectangle())
                     .onHover { hovering in
@@ -210,7 +244,7 @@ struct ContentView: View {
             y: gestureScale,
             anchor: .top
         )
-        .animation(.smooth, value: gestureProgress)
+        .animation(reduceMotion ? nil : .smooth, value: gestureProgress)
         .background(dragDetector)
         .preferredColorScheme(.dark)
         .environmentObject(vm)
@@ -352,7 +386,7 @@ struct ContentView: View {
                     }
                 }
                 .transition(
-                    .scale(scale: 0.8, anchor: .top)
+                    .scale(scale: reduceMotion ? 1 : 0.96, anchor: .top)
                     .combined(with: .opacity)
                     .animation(.smooth(duration: 0.35))
                 )

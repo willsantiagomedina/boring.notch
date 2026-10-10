@@ -1165,6 +1165,10 @@ struct Appearance: View {
     @Default(.customVisualizers) var customVisualizers
     @Default(.selectedVisualizer) var selectedVisualizer
 
+    @Default(.notchSurfaceStyle) private var notchSurfaceStyle
+    @Default(.notchHomeLayout) private var notchHomeLayout
+    @Default(.compactHomeSpacing) private var compactHomeSpacing
+
     let icons: [String] = ["logo2"]
     @State private var selectedIcon: String = "logo2"
     @State private var selectedListVisualizer: CustomVisualizer? = nil
@@ -1174,6 +1178,24 @@ struct Appearance: View {
     @State private var speed: CGFloat = 1.0
     var body: some View {
         Form {
+            Section {
+                Picker("Surface", selection: $notchSurfaceStyle) {
+                    ForEach(NotchSurfaceStyle.allCases) { style in
+                        Text(style.rawValue).tag(style)
+                    }
+                }
+                Picker("Home layout", selection: $notchHomeLayout) {
+                    ForEach(NotchHomeLayout.allCases) { layout in
+                        Text(layout.rawValue).tag(layout)
+                    }
+                }
+                Toggle("Compact spacing", isOn: $compactHomeSpacing)
+            } header: {
+                Text("Notch design")
+            } footer: {
+                Text("Music focus hides the calendar and camera on Home. Glass uses an opaque surface when Reduce Transparency is enabled.")
+            }
+
             Section {
                 Toggle("Always show tabs", isOn: $coordinator.alwaysShowTabs)
                 Defaults.Toggle(key: .settingsIconInNotch) {

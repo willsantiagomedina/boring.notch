@@ -118,6 +118,7 @@ struct MusicControlsView: View {
     @State private var lastDragged: Date = .distantPast
     @Default(.musicControlSlots) private var slotConfig
     @Default(.musicControlSlotLimit) private var slotLimit
+    @Default(.notchHomeLayout) private var homeLayout
 
     var body: some View {
         VStack(alignment: .leading) {
@@ -229,7 +230,7 @@ struct MusicControlsView: View {
         let padded = slotConfig.padded(to: sanitizedLimit, filler: .none)
         let result = Array(padded.prefix(sanitizedLimit))
         // If calendar and camera are both visible alongside music, hide the edge slots
-        let shouldHideEdges = Defaults[.showCalendar] && Defaults[.showMirror] && webcamManager.cameraAvailable && vm.isCameraExpanded
+        let shouldHideEdges = homeLayout != .musicFocus && Defaults[.showCalendar] && Defaults[.showMirror] && webcamManager.cameraAvailable && vm.isCameraExpanded
         if shouldHideEdges && result.count >= 5 {
             return Array(result.dropFirst().dropLast())
         }
@@ -423,6 +424,11 @@ struct NotchHomeView: View {
     @ObservedObject var webcamManager = WebcamManager.shared
     @ObservedObject var batteryModel = BatteryStatusViewModel.shared
     @ObservedObject var coordinator = BoringViewCoordinator.shared
+    @Default(.notchHomeLayout) private var homeLayout
+    @Default(.compactHomeSpacing) private var compactSpacing
+    @Default(.showCalendar) private var showCalendar
+    @Default(.showMirror) private var showMirror
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let albumArtNamespace: Namespace.ID
 
     var body: some View {
@@ -436,33 +442,47 @@ struct NotchHomeView: View {
     }
 
     private var shouldShowCamera: Bool {
-        Defaults[.showMirror] && webcamManager.cameraAvailable && vm.isCameraExpanded
+        homeLayout != .musicFocus && showMirror && webcamManager.cameraAvailable && vm.isCameraExpanded
+    }
+
+    private var showsCalendar: Bool {
+        homeLayout != .musicFocus && showCalendar
+    }
+
+    private var calendar: some View {
+        CalendarView()
+            .frame(width: shouldShowCamera ? 170 : 215)
+            .onHover { vm.isHoveringCalendar = $0 }
+            .onDisappear { vm.isHoveringCalendar = false }
+            .environmentObject(vm)
+            .transition(.opacity)
     }
 
     private var mainContent: some View {
-        HStack(alignment: .top, spacing: (shouldShowCamera && Defaults[.showCalendar]) ? 10 : 15) {
-            MusicPlayerView(albumArtNamespace: albumArtNamespace)
+        HStack(alignment: .top, spacing: compactSpacing ? 8 : (shouldShowCamera && showsCalendar ? 10 : 15)) {
+            if showsCalendar && homeLayout == .calendarFirst {
+                calendar
+            }
 
-            if Defaults[.showCalendar] {
-                CalendarView()
-                    .frame(width: shouldShowCamera ? 170 : 215)
-                    .onHover { isHovering in
-                        vm.isHoveringCalendar = isHovering
-                    }
-                    .environmentObject(vm)
-                    .transition(.opacity)
+            MusicPlayerView(albumArtNamespace: albumArtNamespace)
+                .frame(maxWidth: .infinity)
+
+            if showsCalendar && homeLayout != .calendarFirst {
+                calendar
             }
 
             if shouldShowCamera {
                 CameraPreviewView(webcamManager: webcamManager)
                     .scaledToFit()
                     .opacity(vm.notchState == .closed ? 0 : 1)
-                    .blur(radius: vm.notchState == .closed ? 20 : 0)
-                    .animation(.interactiveSpring(response: 0.32, dampingFraction: 0.76, blendDuration: 0), value: shouldShowCamera)
+                    .blur(radius: reduceMotion ? 0 : vm.notchState == .closed ? 20 : 0)
+                    .transition(.opacity)
             }
         }
-        .transition(.asymmetric(insertion: .opacity.combined(with: .move(edge: .top)), removal: .opacity))
-        .blur(radius: vm.notchState == .closed ? 30 : 0)
+        .animation(reduceMotion ? nil : .smooth(duration: 0.25), value: homeLayout)
+        .animation(reduceMotion ? nil : .smooth(duration: 0.2), value: compactSpacing)
+        .transition(.opacity)
+        .blur(radius: reduceMotion ? 0 : vm.notchState == .closed ? 30 : 0)
     }
 }
 

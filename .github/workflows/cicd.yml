@@ -2,46 +2,47 @@ name: Build for macOS
 
 on:
   push:
-    branches:
-      - '*'
+    branches: ['main', 'feature/**']
   pull_request:
-    branches:
-      - '*'
+  workflow_dispatch:
 
-# https://stackoverflow.com/a/72408109/6942800
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-# Least-privilege: only needs to read code for building.
-permissions:
-  contents: read
-
 jobs:
   build:
-    name: Build Boring Notch
-    strategy:
-      matrix:
-        platform:
-          - macOS
-        xcode:
-          - ^16
-        scheme:
-          - boringNotch
-    # macos-latest now resolves to macos-26, which does not ship Xcode 16.
-    # Keep this legacy main-branch build on an image with the requested toolchain.
+    name: Build downloadable Mac app
     runs-on: macos-15
+    timeout-minutes: 40
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
     steps:
-    - name: Code Checkout
-      # TODO: pin to immutable SHA
-      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-    - # TODO: pin to immutable SHA
-      uses: mxcl/xcodebuild@d3ee9b419c1be9a988086c58fe0988f32d99cfc5 # v3.6.0
-      with:
-        xcode: ${{ matrix.xcode }}
-        platform: ${{ matrix.platform }}
-        scheme: ${{ matrix.scheme }}
-        action: build
-        verbosity: xcpretty
-        upload-logs: always
-        configuration: release
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build and package
+        run: ./scripts/build-ci.sh
+
+      - name: Upload app
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: Boring-Notch-${{ github.sha }}
+          path: build/artifacts/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload build diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: build-diagnostics-${{ github.sha }}
+          path: |
+            build/build.log
+            build/Build.xcresult
+          if-no-files-found: warn
+          retention-days: 7
