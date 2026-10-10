@@ -9,7 +9,7 @@ Builds run in [your GitHub fork](https://github.com/willsantiagomedina/boring.no
 5. Extract the downloaded artifact, then extract `Boring-Notch.zip` inside it.
 6. Quit any running copy of Boring Notch before opening this copy.
 
-The artifact includes a source commit and a SHA-256 checksum. Builds target both Apple Silicon and Intel Macs with macOS 14 or later. They use ad hoc signing and are not notarized. If macOS blocks launch, review the message in System Settings > Privacy & Security before allowing the app. Do not disable Gatekeeper globally.
+The artifact includes a source commit and a SHA-256 checksum. Builds target both Apple Silicon and Intel Macs with macOS 14 or later. They use ad hoc signing and are not notarized. Personal builds disable hardened runtime library validation for this app so its embedded frameworks can load without a signing Team ID. The app sandbox remains enabled. If macOS blocks launch, review the message in System Settings > Privacy & Security before allowing the app. Do not disable Gatekeeper globally.
 
 Automatic upstream updates are disabled in these builds so that an upstream release cannot replace your changes. Download a new artifact to update your copy. Existing app preferences and permissions may be shared with an installed upstream copy because the bundle identifier has not changed.
 

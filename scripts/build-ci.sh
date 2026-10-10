@@ -5,6 +5,8 @@ cd "$(dirname "$0")/.."
 mkdir -p build/artifacts
 # Personal builds must not replace themselves with upstream releases.
 /usr/libexec/PlistBuddy -c 'Add :BNDisableUpdates bool true' boringNotch/Info.plist
+# Ad hoc signatures have no Team ID for hardened runtime library validation.
+/usr/libexec/PlistBuddy -c 'Add :com.apple.security.cs.disable-library-validation bool true' boringNotch/boringNotch.entitlements
 xcodebuild -version
 xcodebuild build \
   -project boringNotch.xcodeproj \
