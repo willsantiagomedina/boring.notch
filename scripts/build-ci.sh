@@ -23,7 +23,7 @@ xcodebuild build \
 app='build/DerivedData/Build/Products/Release/Boring Notch.app'
 test -d "$app"
 codesign --verify --deep --strict --verbose=2 "$app"
-lipo -verify_arch arm64 x86_64 "$app/Contents/MacOS/Boring Notch"
+lipo "$app/Contents/MacOS/Boring Notch" -verify_arch arm64 x86_64
 # Preserve bundle symlinks and executable permissions inside the artifact.
 ditto -c -k --sequesterRsrc --keepParent "$app" build/artifacts/Boring-Notch.zip
 shasum -a 256 build/artifacts/Boring-Notch.zip > build/artifacts/SHA256SUMS.txt
